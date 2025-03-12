@@ -10,7 +10,7 @@ $ Install Git, Start cd
 - cd AnonymousTool.sh
 
 $ Add Right
-- chmod +x Anonymous.sh
+- chmod +x AnonymousTool.sh
 
 $ Run Script
-- bash Anonymous.sh
+- bash AnonymousTool.sh
