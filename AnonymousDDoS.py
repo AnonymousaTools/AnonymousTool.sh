@@ -7,7 +7,7 @@ import random
 
 # Clear the terminal
 os.system("clear")
-os.system("figlet DDoSlayer")
+os.system("figlet AnonymousDDoS.py")
 
 
 # Prompt for target IP and port
