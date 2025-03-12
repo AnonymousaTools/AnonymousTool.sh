@@ -1,6 +1,10 @@
 # AnonymousTool.sh
 AnonymousTool &amp; Install Tool
 
+$ Online Installer
+- sudo apt update && sudo apt install -y curl jq python3 python3-pip
+- pip install flask flask_cors
+
 $ Install Pkg Files
 - pkg update && pkg upgrade -y
 - pkg install bash coreutils curl wget git nano -y
