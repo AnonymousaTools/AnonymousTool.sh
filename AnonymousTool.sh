@@ -4,10 +4,8 @@
 red='\033[1;31m'
 green='\033[1;32m'
 yellow='\033[1;33m'
-blue='\033[1;34m'
 purple='\033[1;35m'
 cyan='\033[1;36m'
-white='\033[1;37m'
 reset='\033[0m'
 
 CHAT_FILE="chat.txt"
@@ -35,7 +33,7 @@ header() {
     echo -e "╚═════════════════════════════════╝${reset}"
 }
 
-# Funkcja rejestracji nowego użytkownika
+# Rejestracja użytkownika
 register() {
     header "Rejestracja"
 
@@ -55,7 +53,7 @@ register() {
     sleep 2
 }
 
-# Funkcja logowania
+# Logowanie użytkownika
 login() {
     header "Logowanie"
 
@@ -68,7 +66,7 @@ login() {
             nick=$(grep "^$email|$password|" "$USER_DB" | cut -d '|' -f3)
             echo "$nick" > "$USER_FILE"
 
-            # Dodanie użytkownika do aktywnych
+            # Dodanie użytkownika do listy aktywnych
             if ! grep -q "^$nick$" "$ACTIVE_USERS"; then
                 echo "$nick" >> "$ACTIVE_USERS"
             fi
@@ -83,7 +81,7 @@ login() {
     done
 }
 
-# Funkcja wylogowania
+# Wylogowanie użytkownika
 logout() {
     if [ -f "$USER_FILE" ]; then
         nick=$(cat "$USER_FILE")
@@ -92,7 +90,7 @@ logout() {
     fi
 }
 
-# Funkcja wyświetlania aktywnych użytkowników
+# Wyświetlanie aktywnych użytkowników
 show_active_users() {
     echo -e "\n${yellow}👥 Aktywni użytkownicy:${reset}"
     if [ -s "$ACTIVE_USERS" ]; then
@@ -107,17 +105,16 @@ chat() {
     nick=$(cat "$USER_FILE")
     echo "[$(date '+%H:%M:%S')] $nick dołączył/a do czatu." >> "$CHAT_FILE"
 
+    # Uruchamianie procesu odświeżania czatu w tle
+    tail -f "$CHAT_FILE" &  # Proces działa w tle
+    TAIL_PID=$!  # Pobieramy PID procesu, aby go później zakończyć
+
     while true; do
-        clear
-        header "Anonymous Chat"
-        show_active_users
-
-        echo -e "\n--- Ostatnie wiadomości ---"
-        tail -n 10 "$CHAT_FILE" 2>/dev/null
-        echo -e "--------------------------------"
-
+        echo -e "\n${yellow}Aby wyjść, wpisz: exit${reset}"
         read -p "$nick: " message
+
         if [[ "$message" == "exit" ]]; then
+            kill $TAIL_PID  # Zatrzymanie procesu odświeżania czatu
             logout
             break
         elif [[ -n "$message" ]]; then
