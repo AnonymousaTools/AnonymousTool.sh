@@ -12,6 +12,7 @@ CHAT_FILE="chat.txt"
 USER_FILE="user_info.txt"
 USER_DB="users.txt"
 ACTIVE_USERS="active_users.txt"
+TYPING_FILE="typing.txt"
 
 # Funkcja animacji
 animate() {
@@ -90,13 +91,20 @@ logout() {
     fi
 }
 
-# Wyświetlanie aktywnych użytkowników
+# Wyświetlanie aktywnych użytkowników i ich liczby
 show_active_users() {
-    echo -e "\n${yellow}👥 Aktywni użytkownicy:${reset}"
+    echo -e "\n${yellow}👥 Aktywni użytkownicy (${green}$(wc -l < "$ACTIVE_USERS")${yellow}):${reset}"
     if [ -s "$ACTIVE_USERS" ]; then
         cat "$ACTIVE_USERS"
     else
         echo "Brak aktywnych użytkowników."
+    fi
+}
+
+# Pokazuje, kto pisze
+show_typing() {
+    if [ -s "$TYPING_FILE" ]; then
+        echo -e "\n${cyan}✍️  $(cat "$TYPING_FILE") pisze...${reset}"
     fi
 }
 
@@ -110,8 +118,19 @@ chat() {
     TAIL_PID=$!  # Pobieramy PID procesu, aby go później zakończyć
 
     while true; do
-        echo -e "\n${yellow}Aby wyjść, wpisz: exit${reset}"
+        clear
+        header "Anonymous Chat"
+        show_active_users
+        show_typing
+        echo -e "\n--- Ostatnie wiadomości ---"
+        tail -n 10 "$CHAT_FILE" 2>/dev/null
+        echo -e "\n--------------------------------"
+
+        # Monitorowanie pisania
+        echo "$nick" > "$TYPING_FILE"
+
         read -p "$nick: " message
+        > "$TYPING_FILE"  # Czyszczenie pliku "piszącego"
 
         if [[ "$message" == "exit" ]]; then
             kill $TAIL_PID  # Zatrzymanie procesu odświeżania czatu
