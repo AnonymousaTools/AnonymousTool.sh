@@ -1,166 +1,97 @@
 #!/bin/bash
 
-# Kolory terminala
-red='\033[1;31m'
-green='\033[1;32m'
-yellow='\033[1;33m'
-purple='\033[1;35m'
-cyan='\033[1;36m'
-reset='\033[0m'
+# Adres serwera (zmień na adres swojego VPS, jeśli chcesz działać globalnie)
+SERVER_URL="http://127.0.0.1:5000"
 
-CHAT_FILE="chat.txt"
-USER_FILE="user_info.txt"
-USER_DB="users.txt"
-ACTIVE_USERS="active_users.txt"
-TYPING_FILE="typing.txt"
+# Sprawdzenie, czy Python jest zainstalowany
+if ! command -v python3 &> /dev/null; then
+    echo "❌ Python3 nie jest zainstalowany! Zainstaluj go i spróbuj ponownie."
+    exit 1
+fi
 
-# Funkcja animacji
-animate() {
-    for i in {1..3}; do
-        echo -ne "${yellow}Ładowanie${reset}."
-        sleep 0.5
-        echo -ne "."
-        sleep 0.5
-        echo -ne ".\n"
-        sleep 0.5
-    done
+# Uruchomienie serwera w tle
+start_server() {
+    echo "🔄 Uruchamiam serwer czatu..."
+    python3 - <<EOF &
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+
+app = Flask(__name__)
+CORS(app)
+
+messages = []
+active_users = set()
+
+@app.route('/send', methods=['POST'])
+def send_message():
+    data = request.json
+    if 'nick' in data and 'message' in data:
+        messages.append(f"{data['nick']}: {data['message']}")
+        return jsonify({"status": "OK"})
+    return jsonify({"status": "ERROR"}), 400
+
+@app.route('/messages', methods=['GET'])
+def get_messages():
+    return jsonify(messages)
+
+@app.route('/active_users', methods=['POST'])
+def add_user():
+    data = request.json
+    if 'nick' in data:
+        active_users.add(data['nick'])
+        return jsonify({"status": "OK"})
+    return jsonify({"status": "ERROR"}), 400
+
+@app.route('/users', methods=['GET'])
+def get_users():
+    return jsonify(list(active_users))
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
+EOF
 }
 
-# Funkcja wyświetlania nagłówka
-header() {
-    clear
-    echo -e "${purple}╔═════════════════════════════════╗"
-    echo -e "║      ${white}$1${purple}        ║"
-    echo -e "╚═════════════════════════════════╝${reset}"
-}
+# Sprawdzenie, czy serwer działa, jeśli nie – uruchom go
+if ! curl -s "$SERVER_URL/messages" >/dev/null; then
+    start_server
+    sleep 3  # Czekamy, aż serwer się uruchomi
+fi
 
-# Rejestracja użytkownika
-register() {
-    header "Rejestracja"
+# Pobranie nicku użytkownika
+read -p "Podaj swój nick: " nick
 
-    read -p "Podaj email: " email
-    if grep -q "^$email|" "$USER_DB"; then
-        echo -e "${red}Konto z tym emailem już istnieje!${reset}"
-        sleep 2
-        return
-    fi
+# Rejestracja użytkownika na serwerze
+curl -s -X POST -H "Content-Type: application/json" -d "{\"nick\": \"$nick\"}" "$SERVER_URL/active_users" >/dev/null
 
-    read -sp "Podaj hasło: " password
-    echo ""
-    read -p "Wybierz nick: " nick
-
-    echo "$email|$password|$nick" >> "$USER_DB"
-    echo -e "${green}Konto utworzone! Możesz się teraz zalogować.${reset}"
-    sleep 2
-}
-
-# Logowanie użytkownika
-login() {
-    header "Logowanie"
-
-    while true; do
-        read -p "Email: " email
-        read -sp "Hasło: " password
-        echo ""
-
-        if grep -q "^$email|$password|" "$USER_DB"; then
-            nick=$(grep "^$email|$password|" "$USER_DB" | cut -d '|' -f3)
-            echo "$nick" > "$USER_FILE"
-
-            # Dodanie użytkownika do listy aktywnych
-            if ! grep -q "^$nick$" "$ACTIVE_USERS"; then
-                echo "$nick" >> "$ACTIVE_USERS"
-            fi
-
-            echo -e "${green}Zalogowano jako $nick!${reset}"
-            sleep 2
-            break
-        else
-            echo -e "${red}Nieprawidłowy email lub hasło!${reset}"
-            sleep 2
-        fi
-    done
-}
-
-# Wylogowanie użytkownika
-logout() {
-    if [ -f "$USER_FILE" ]; then
-        nick=$(cat "$USER_FILE")
-        sed -i "/^$nick$/d" "$ACTIVE_USERS"
-        rm -f "$USER_FILE"
-    fi
-}
-
-# Wyświetlanie aktywnych użytkowników i ich liczby
-show_active_users() {
-    echo -e "\n${yellow}👥 Aktywni użytkownicy (${green}$(wc -l < "$ACTIVE_USERS")${yellow}):${reset}"
-    if [ -s "$ACTIVE_USERS" ]; then
-        cat "$ACTIVE_USERS"
-    else
-        echo "Brak aktywnych użytkowników."
-    fi
-}
-
-# Pokazuje, kto pisze
-show_typing() {
-    if [ -s "$TYPING_FILE" ]; then
-        echo -e "\n${cyan}✍️  $(cat "$TYPING_FILE") pisze...${reset}"
-    fi
-}
-
-# Funkcja czatu na żywo
-chat() {
-    nick=$(cat "$USER_FILE")
-    echo "[$(date '+%H:%M:%S')] $nick dołączył/a do czatu." >> "$CHAT_FILE"
-
-    # Uruchamianie procesu odświeżania czatu w tle
-    tail -f "$CHAT_FILE" &  # Proces działa w tle
-    TAIL_PID=$!  # Pobieramy PID procesu, aby go później zakończyć
-
+# Funkcja wyświetlająca wiadomości na żywo
+fetch_messages() {
     while true; do
         clear
-        header "Anonymous Chat"
-        show_active_users
-        show_typing
-        echo -e "\n--- Ostatnie wiadomości ---"
-        tail -n 10 "$CHAT_FILE" 2>/dev/null
-        echo -e "\n--------------------------------"
-
-        # Monitorowanie pisania
-        echo "$nick" > "$TYPING_FILE"
-
-        read -p "$nick: " message
-        > "$TYPING_FILE"  # Czyszczenie pliku "piszącego"
-
-        if [[ "$message" == "exit" ]]; then
-            kill $TAIL_PID  # Zatrzymanie procesu odświeżania czatu
-            logout
-            break
-        elif [[ -n "$message" ]]; then
-            echo "[$(date '+%H:%M:%S')] $nick: $message" >> "$CHAT_FILE"
-        fi
-    done
-}
-
-# Główne menu
-main_menu() {
-    while true; do
-        clear
-        header "Anonymous Chat"
-        echo -e "1) 🔑 Zaloguj się"
-        echo -e "2) 📝 Zarejestruj nowe konto"
-        echo -e "3) ❌ Wyjście"
-        read -p "Wybierz opcję: " choice
+        echo "🔵 Anonymous Chat - Online"
+        echo "----------------------------------"
         
-        case $choice in
-            1) login; chat ;;
-            2) register ;;
-            3) logout; exit 0 ;;
-            *) echo -e "${red}Niepoprawna opcja!${reset}" ;;
-        esac
+        # Pobranie wiadomości z serwera
+        curl -s "$SERVER_URL/messages" | jq -r '.[]'
+        
+        # Pobranie aktywnych użytkowników
+        echo -e "\n👥 Aktywni użytkownicy:"
+        curl -s "$SERVER_URL/users" | jq -r '.[]'
+
+        sleep 2  # Aktualizacja co 2 sekundy
     done
 }
 
-# Uruchomienie programu
-animate
-main_menu
+# Uruchomienie pobierania wiadomości w tle
+fetch_messages &
+
+# Wysyłanie wiadomości
+while true; do
+    read -p "$nick: " message
+    if [[ "$message" == "exit" ]]; then
+        echo "❌ Wylogowywanie..."
+        kill %1  # Zatrzymaj pobieranie wiadomości
+        exit 0
+    fi
+
+    curl -s -X POST -H "Content-Type: application/json" -d "{\"nick\": \"$nick\", \"message\": \"$message\"}" "$SERVER_URL/send" >/dev/null
+done
