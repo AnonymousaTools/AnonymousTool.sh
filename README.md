@@ -7,7 +7,7 @@ $ Install Pkg Files
 
 $ Install Git, Start cd
 - git clone https://github.com/AnonymousaTools/AnonymousTool.sh.git
-- cd AnonymousChat
+- cd AnonymousTool.sh
 
 $ Add Right
 - chmod +x Anonymous.sh
