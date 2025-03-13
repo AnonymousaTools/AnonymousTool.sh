@@ -58,7 +58,7 @@ goto menu;
 menu:
 asciiart();
 echo "\n";
-echo "$red =========================== Cvar1984 ))=====(@)> \n";
+echo "$red =========================== List ))=====(@)> \n";
 echo "\n$green";
 echo " |_(01) Nmap Wszystko >> \n";
 echo " |__(02) Nmap SQL-I Skan >> \n";
