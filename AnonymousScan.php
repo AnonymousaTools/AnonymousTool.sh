@@ -43,7 +43,7 @@ input:
 input("Target Host");
 $host=trim(fgets(STDIN, 1024));
 if(strpos($host, '://') !== false) {
-echo "\n$red ( ! ) Proszę wprowadzić URL Without http:// or https:// ( ! ) \n";
+echo "\n$red ( ! ) Proszę wprowadzić URL - http:// or https:// ( ! ) \n";
 goto input;
 }elseif(strpos($host, '.') == false) {
 echo "\n$red ( ! ) Format adresu URL fałszywy ( ! ) \n";
